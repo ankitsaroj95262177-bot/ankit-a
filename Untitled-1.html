@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="hi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ankit AI - Full Control Pro Suite</title>
+    <style>
+        :root[data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        :root[data-theme="light"] {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --accent-color: #2563eb;
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #auth-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            padding: 30px; border-radius: 12px;
+            width: 340px; border: 1px solid var(--border-color);
+            text-align: center; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .auth-card input {
+            width: 100%; margin: 8px 0; padding: 12px;
+            border-radius: 6px; border: 1px solid var(--border-color);
+            background: var(--bg-color); color: var(--text-color);
+        }
+
+        .sidebar {
+            width: 260px; background-color: var(--card-bg);
+            padding: 20px; display: flex; flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .brand-title {
+            font-size: 1.4rem; font-weight: bold;
+            color: var(--accent-color); margin-bottom: 20px;
+        }
+
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .nav-item {
+            padding: 12px; border-radius: 8px; cursor: pointer;
+            color: var(--text-muted); display: flex; align-items: center; gap: 10px;
+        }
+        .nav-item:hover, .nav-item.active { background-color: var(--accent-color); color: white; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .header {
+            padding: 15px 20px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .workspace-panel { flex: 1; padding: 20px; display: none; flex-direction: column; overflow-y: auto; }
+        .workspace-panel.active { display: flex; }
+
+        .chat-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; white-space: pre-wrap; line-height: 1.5; }
+        .message.user { align-self: flex-end; background-color: var(--accent-color); color: white; }
+        .message.ai { align-self: flex-start; background-color: var(--card-bg); border: 1px solid var(--border-color); }
+
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"], textarea {
+            flex: 1; padding: 12px; border-radius: 8px;
+            border: 1px solid var(--border-color); background-color: var(--card-bg);
+            color: var(--text-color); outline: none;
+        }
+
+        button {
+            padding: 10px 16px; background-color: var(--accent-color);
+            color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+        }
+        .mic-btn { background-color: #e11d48; }
+        .active-wake { background-color: #10b981 !important; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        .studio-card {
+            background-color: var(--card-bg); padding: 20px;
+            border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal">
+        <div class="auth-card">
+            <h2>⚡ Ankit AI Login</h2>
+            <input type="password" id="api-key-input" placeholder="अपनी Gemini API Key डालें">
+            <button onclick="saveApiKey()" style="width: 100%; margin-top: 10px;">Save & Start</button>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                API Key प्राप्त करने के लिए Google AI Studio पर जाएँ।
+            </p>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="brand-title">⚡ Ankit AI Pro</div>
+        <ul class="nav-list">
+            <li class="nav-item active" onclick="switchTab('chat', event)">💬 Smart Assistant</li>
+            <li class="nav-item" onclick="switchTab('code', event)">💻 Code Studio</li>
+            <li class="nav-item" onclick="switchTab('image', event)">🎨 Image Studio</li>
+            <li class="nav-item" onclick="switchTab('vision', event)">👁️ Vision AI</li>
+        </ul>
+        <button id="wake-btn" onclick="toggleWakeWordListener()" style="margin-bottom: 10px; background: #8b5cf6;">🎙 Enable "Hey Ankit"</button>
+        <button onclick="toggleTheme()" style="background: var(--border-color); color: var(--text-color);">🌗 Toggle Theme</button>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-content">
+        <div class="header">
+            <h2 id="tab-title">Voice & Smart Control Assistant</h2>
+            <div>
+                <button onclick="exportChat()" style="background: #059669; padding: 6px 12px;">Export Chat</button>
+                <button onclick="clearChatHistory()" style="background: #dc2626; padding: 6px 12px;">Clear History</button>
+                <button id="logout-btn" onclick="logoutUser()" style="background: #64748b; padding: 6px 12px;">Change API Key</button>
+            </div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div id="chat" class="workspace-panel active">
+            <div class="chat-box" id="chat-messages"></div>
+            <div class="input-area">
+                <input type="text" id="chat-input" placeholder="मैसेज लिखें या बोलें (e.g. 'Open YouTube', 'Navigate to Lalganj')..." onkeypress="handleKeyPress(event)">
+                <button class="mic-btn" onclick="startVoiceInput('chat-input')">🎙️</button>
+                <button onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+
+        <!-- Code Panel -->
+        <div id="code" class="workspace-panel">
+            <div class="studio-card">
+                <h3>Code Generator & Debugger</h3>
+                <textarea id="code-prompt" rows="3" placeholder="क्या कोड लिखना है?"></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="generateCode()">Generate Code</button>
+                    <button onclick="copyCode()" style="background: #059669;">Copy Code</button>
+                </div>
+            </div>
+            <div class="studio-card" style="flex: 1; overflow-y: auto;">
+                <pre><code id="code-output" style="color: #38bdf8; font-family: monospace;">// Code output...</code></pre>
+            </div>
+        </div>
+
+        <!-- Image Panel -->
+        <div id="image" class="workspace-panel">
+            <div class="studio-card">
+                <h3>AI Image Studio</h3>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="image-prompt" placeholder="Describe the image...">
+                    <button onclick="generateImage()">Generate</button>
+                </div>
+            </div>
+            <div id="image-container" style="flex:1; border:1px dashed var(--border-color); display:flex; align-items:center; justify-content:center; border-radius:8px;">
+                Image Output Preview
+            </div>
+        </div>
+
+        <!-- Vision Panel -->
+        <div id="vision" class="workspace-panel">
+            <div class="studio-card">
+                <h3>Vision Analysis</h3>
+                <input type="file" id="vision-file" accept="image/*" style="margin-top: 10px;">
+                <input type="text" id="vision-prompt" placeholder="सवाल लिखें..." style="margin-top: 10px; width:100%;">
+                <button style="margin-top: 10px;" onclick="analyzeImage()">Analyze</button>
+            </div>
+            <div class="studio-card">
+                <p id="vision-output" style="color: var(--text-muted);">Result will appear here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+        let isWakeWordActive = false;
+        let wakeRecognition;
+
+        window.onload = () => {
+            if (GEMINI_API_KEY) {
+                document.getElementById('auth-modal').style.display = 'none';
+            }
+            loadChatHistory();
+        };
+
+        function saveApiKey() {
+            const keyInput = document.getElementById('api-key-input').value.trim();
+            if (keyInput) {
+                GEMINI_API_KEY = keyInput;
+                localStorage.setItem('gemini_api_key', keyInput);
+                document.getElementById('auth-modal').style.display = 'none';
+            } else {
+                alert('कृपया एक वैध API Key दर्ज करें!');
+            }
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('gemini_api_key');
+            GEMINI_API_KEY = '';
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function processDeviceCommands(text) {
+            const lower = text.toLowerCase();
+
+            if (lower.includes('open youtube')) {
+                speakText("Opening YouTube");
+                window.open('https://www.youtube.com', '_blank');
+                return true;
+            }
+            if (lower.includes('open whatsapp')) {
+                speakText("Opening WhatsApp");
+                window.open('https://web.whatsapp.com', '_blank');
+                return true;
+            }
+
+            if (lower.includes('go to') || lower.includes('navigate to') || lower.includes('jana hai') || lower.includes('map')) {
+                let location = lower.replace(/open map|navigate to|go to|mujhe|jana hai|khol do|dikhao/g, '').trim();
+                if (location) {
+                    speakText(`Navigating to ${location}`);
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`, '_blank');
+                    return true;
+                }
+            }
+
+            if (lower.includes('call ')) {
+                let contact = lower.replace('call', '').trim();
+                speakText(`Initiating call to ${contact}`);
+                window.open(`tel:${contact}`, '_self');
+                return true;
+            }
+
+            return false;
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'hi-IN';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function toggleWakeWordListener() {
+            const btn = document.getElementById('wake-btn');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                alert("आपका ब्राउज़र Voice Recognition को सपोर्ट नहीं करता है। (Chrome या Edge का इस्तेमाल करें)");
+                return;
+            }
+
+            if (!isWakeWordActive) {
+                wakeRecognition = new SpeechRecognition();
+                wakeRecognition.continuous = true;
+                wakeRecognition.interimResults = false;
+                wakeRecognition.lang = 'hi-IN';
+
+                wakeRecognition.onresult = (e) => {
+                    const lastResult = e.results[e.results.length - 1][0].transcript.toLowerCase().trim();
+                    if (lastResult.includes('hey ankit') || lastResult.includes('हे अंकित')) {
+                        let command = lastResult.replace(/hey ankit|हे अंकित/g, '').trim();
+                        if (command) {
+                            handleSpeechCommand(command);
+                        } else {
+                            speakText("जी, मैं सुन रहा हूँ। क्या हुक्म है?");
+                        }
+                    }
+                };
+
+                wakeRecognition.onerror = (err) => {
+                    console.error("Speech Recognition Error:", err);
+                };
+
+                wakeRecognition.start();
+                isWakeWordActive = true;
+                btn.classList.add('active-wake');
+                btn.innerText = "🎙️ Listening 'Hey Ankit'";
+            } else {
+                if (wakeRecognition) wakeRecognition.stop();
+                isWakeWordActive = false;
+                btn.classList.remove('active-wake');
+                btn.innerText = "🎙️ Enable 'Hey Ankit'";
+            }
+        }
+
+        function handleSpeechCommand(cmd) {
+            document.getElementById('chat-input').value = cmd;
+            sendChatMessage();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            addMessageToBox(msg, 'user');
+            saveChatHistory(msg, 'user');
+            input.value = '';
+
+            if (processDeviceCommands(msg)) return;
+
+            const reply = await callGeminiAPI(msg);
+            addMessageToBox(reply, 'ai');
+            saveChatHistory(reply, 'ai');
+            speakText(reply);
+        }
+
+        function addMessageToBox(text, sender) {
+            const box = document.getElementById('chat-messages');
+            box.innerHTML += `<div class="message ${sender}">${text}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function saveChatHistory(text, sender) {
+            let history = JSON.parse(localStorage.getItem('ankit_chat_history') || '[]');
+            history.push({ text, sender });
+            localStorage.setItem('ankit_chat_history', JSON.stringify(history));
+        }
+
+        function loadChatHistory() {
+            let history = JSON.parse(localStorage.getItem('ankit_chat_history') || '[]');
+            if (history.length === 0) {
+                addMessageToBox("नमस्ते! मैं आपका AI असिस्टेंट हूँ। आप 'Hey Ankit' बोलकर या कमांड देकर ऐप्स और मैप्स खोल सकते हैं।", 'ai');
+            } else {
+                history.forEach(item => addMessageToBox(item.text, item.sender));
+            }
+        }
+
+        function clearChatHistory() {
+            localStorage.removeItem('ankit_chat_history');
+            document.getElementById('chat-messages').innerHTML = '';
+            addMessageToBox("चैट हिस्ट्री साफ़ कर दी गई है।", 'ai');
+        }
+
+        function exportChat() {
+            let history = localStorage.getItem('ankit_chat_history');
+            if (!history) return alert("कोई चैट हिस्ट्री उपलब्ध नहीं है।");
+            const blob = new Blob([history], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ankit_ai_chat_export.json';
+            a.click();
+        }
+
+        function copyCode() {
+            const codeText = document.getElementById('code-output').innerText;
+            navigator.clipboard.writeText(codeText);
+            alert("कोड क्लिपबोर्ड पर कॉपी हो गया!");
+        }
+
+        // Gemini API Call Function
+        async function callGeminiAPI(prompt) {
+            if (!GEMINI_API_KEY) {
+                return "कृपया पहले अपनी Gemini API Key सेट करें।";
+            }
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                if (data.error) return "API Error: " + data.error.message;
+                return data.candidates[0].content.parts[0].text;
+            } catch (err) {
+                return "एरर: " + err.message;
+            }
+        }
+
+        function switchTab(tabId, e) {
+            document.querySelectorAll('.workspace-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            e.currentTarget.classList.add('active');
+        }
+
+        function toggleTheme() {
+            const cur = document.documentElement.getAttribute('data-theme');
+            document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+        }
+
+        function handleKeyPress(e) { if (e.key === 'Enter') sendChatMessage(); }
+
+        function startVoiceInput(inputId) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const rec = new SpeechRecognition();
+                rec.lang = 'hi-IN';
+                rec.start();
+                rec.onresult = (e) => { document.getElementById(inputId).value = e.results[0][0].transcript; };
+            } else {
+                alert("आपका ब्राउज़र Voice Input को सपोर्ट नहीं करता।");
+            }
+        }
+
+        async function generateCode() {
+            const prompt = document.getElementById('code-prompt').value;
+            if (!prompt) return;
+            document.getElementById('code-output').innerText = "// Generating code...";
+            const reply = await callGeminiAPI(`Write clean, documented code for: ${prompt}`);
+            document.getElementById('code-output').innerText = reply;
+        }
+
+        function generateImage() {
+            const p = document.getElementById('image-prompt').value;
+            if (p) document.getElementById('image-container').innerHTML = `Image prompt requested for: <b>${p}</b>`;
+        }
+
+        function analyzeImage() {
+            const file = document.getElementById('vision-file').files[0];
+            if (file) document.getElementById('vision-output').innerText = "Analyzing file: " + file.name;
+        }
+    </script>
+</body>
+</html>
